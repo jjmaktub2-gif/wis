@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RELATORIO.SYS // TURNO</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --neon:#00ff9f;--neon2:#ff003c;--neon3:#00e5ff;--neon4:#ff00ff;--amber:#ffdd00;
+  --bg:#020408;--bg2:#060c12;--bg3:#0a1018;--bg4:#0d1520;
+  --border:rgba(0,255,159,.12);--border2:rgba(0,255,159,.28);
+  --text:#c8e6e0;--text2:rgba(200,230,224,.5);--text3:rgba(200,230,224,.25);
+  --font-mono:'Share Tech Mono',monospace;
+  --font-title:'Orbitron',monospace;
+  --font-body:'Rajdhani',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;cursor:none}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:9990}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.6) 100%);pointer-events:none;z-index:9989}
+
+.cursor{position:fixed;width:4px;height:18px;background:var(--neon);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 8px var(--neon);animation:cblink .8s infinite}
+@keyframes cblink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cursor-x{position:fixed;width:24px;height:24px;pointer-events:none;z-index:9998;transform:translate(-50%,-50%)}
+.cursor-x::before,.cursor-x::after{content:'';position:absolute;background:rgba(0,229,255,.5)}
+.cursor-x::before{width:100%;height:1px;top:50%;transform:translateY(-50%)}
+.cursor-x::after{width:1px;height:100%;left:50%;transform:translateX(-50%)}
+
+.grid-bg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,159,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,159,.025) 1px,transparent 1px);background-size:60px 60px;z-index:0}
+.glow1{position:fixed;width:500px;height:500px;border-radius:50%;background:rgba(0,255,159,.04);filter:blur(80px);top:-200px;left:-100px;pointer-events:none;z-index:0}
+.glow2{position:fixed;width:400px;height:400px;border-radius:50%;background:rgba(0,229,255,.03);filter:blur(80px);bottom:-100px;right:-100px;pointer-events:none;z-index:0}
+.scan-v{position:fixed;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--neon3),transparent);animation:sv 10s linear infinite;opacity:.06;pointer-events:none;z-index:9991}
+@keyframes sv{0%{left:-1px}100%{left:100vw}}
+
+/* LAYOUT */
+.app{position:relative;z-index:2;display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:20px;border-bottom:1px solid var(--border)}
+.sb-logo-title{font-family:var(--font-title);font-size:13px;font-weight:900;color:var(--neon);text-shadow:0 0 15px var(--neon);letter-spacing:.08em;margin-bottom:4px}
+.sb-logo-sub{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.12em}
+.sb-status{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--font-mono);font-size:9px;color:var(--neon);letter-spacing:.08em}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--neon);box-shadow:0 0 6px var(--neon);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.sb-section{padding:16px 20px 8px;font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.18em;border-top:1px solid var(--border)}
+.sb-btn{width:100%;background:none;border:none;padding:10px 20px;text-align:left;cursor:none;display:flex;align-items:center;gap:10px;transition:background .2s;color:var(--text2);font-family:var(--font-mono);font-size:11px;letter-spacing:.06em}
+.sb-btn:hover,.sb-btn.active{background:rgba(0,255,159,.06);color:var(--neon)}
+.sb-btn.active{border-left:2px solid var(--neon)}
+.sb-btn-icon{font-size:14px;width:18px;text-align:center}
+
+.sb-turno-info{margin:16px;background:rgba(0,255,159,.04);border:1px solid var(--border2);padding:14px;position:relative}
+.sb-turno-info::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent)}
+.sti-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.15em;margin-bottom:8px}
+.sti-val{font-family:var(--font-title);font-size:14px;font-weight:700;color:var(--neon);margin-bottom:4px}
+.sti-sub{font-family:var(--font-mono);font-size:9px;color:var(--text2)}
+
+.sb-counters{margin:0 16px 16px;display:grid;gap:4px}
+.sb-count-row{background:rgba(0,0,0,.3);border:1px solid var(--border);padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+.scr-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.06em}
+.scr-val{font-family:var(--font-title);font-size:14px;font-weight:700}
+
+/* MAIN */
+.main{display:flex;flex-direction:column}
+
+/* TOP BAR */
+.topbar{background:rgba(2,4,8,.9);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.tb-title{font-family:var(--font-title);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--text)}
+.tb-right{display:flex;gap:10px;align-items:center}
+.tb-time{font-family:var(--font-mono);font-size:11px;color:var(--neon3);letter-spacing:.1em}
+.btn-gerar{background:var(--neon);color:var(--bg);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:8px 20px;border:none;cursor:none;transition:all .2s;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)}
+.btn-gerar:hover{background:#fff;box-shadow:0 0 20px var(--neon)}
+.btn-export{background:none;color:var(--neon3);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;padding:8px 16px;border:1px solid rgba(0,229,255,.3);cursor:none;transition:all .2s}
+.btn-export:hover{background:rgba(0,229,255,.06);box-shadow:0 0 12px rgba(0,229,255,.15)}
+
+/* CONTENT */
+.content{padding:28px;flex:1}
+
+/* TABS */
+.tabs{display:flex;gap:1px;background:var(--border);margin-bottom:24px}
+.tab{flex:1;background:var(--bg2);font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;color:var(--text3);padding:10px;text-align:center;cursor:none;transition:all .2s;border:none}
+.tab.active{background:rgba(0,255,159,.06);color:var(--neon);border-bottom:2px solid var(--neon)}
+.tab:hover{color:var(--text2)}
+
+/* PANELS */
+.panel{display:none}
+.panel.active{display:block}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-family:var(--font-mono);font-size:9px;color:var(--neon3);letter-spacing:.15em}
+.form-input,.form-select,.form-textarea{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:10px 12px;outline:none;transition:border-color .2s;letter-spacing:.04em;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--neon);box-shadow:0 0 10px rgba(0,255,159,.08)}
+.form-select{cursor:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300ff9f'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.6}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);margin-bottom:16px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent);opacity:.4}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.card-icon{font-size:14px}
+.card-title{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--neon)}
+.card-body{padding:18px}
+
+/* OCORRÊNCIA ITEM */
+.oc-list{display:grid;gap:8px}
+.oc-item{background:var(--bg3);border:1px solid var(--border);padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;transition:border-color .2s}
+.oc-item:hover{border-color:rgba(0,255,159,.25)}
+.oc-badge{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.oc-info{}
+.oc-tipo{font-size:13px;font-weight:600;margin-bottom:3px;letter-spacing:.02em}
+.oc-meta{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.06em}
+.oc-status{font-family:var(--font-mono);font-size:9px;padding:3px 10px;border:1px solid;letter-spacing:.08em}
+.oc-del{background:none;border:1px solid rgba(255,0,60,.2);color:rgba(255,0,60,.5);font-size:12px;width:28px;height:28px;cursor:none;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.oc-del:hover{background:rgba(255,0,60,.1);color:var(--neon2);border-color:var(--neon2)}
+
+/* ADD OC FORM */
+.add-oc{background:rgba(0,255,159,.03);border:1px solid rgba(0,255,159,.15);padding:16px;margin-bottom:16px}
+.add-oc-title{font-family:var(--font-mono);font-size:10px;color:var(--neon);letter-spacing:.12em;margin-bottom:14px}
+.add-oc-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
+.btn-add{background:rgba(0,255,159,.1);border:1px solid var(--border2);color:var(--neon);font-family:var(--font-mono);font-size:11px;padding:10px 16px;cursor:none;letter-spacing:.08em;transition:all .2s;white-space:nowrap}
+.btn-add:hover{background:rgba(0,255,159,.18);box-shadow:0 0 12px rgba(0,255,159,.15)}
+
+/* AGENTES */
+.agentes-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.agente-card{background:var(--bg3);border:1px solid var(--border);padding:12px 14px;position:relative;overflow:hidden}
+.agente-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.agente-nome{font-size:13px;font-weight:600;margin-bottom:3px}
+.agente-mat{font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:8px;letter-spacing:.06em}
+.agente-status{font-family:var(--font-mono);font-size:9px;padding:2px 8px;border:1px solid;letter-spacing:.06em;display:inline-block}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,var(--neon),var(--neon3),transparent)}
+.tl-item{position:relative;margin-bottom:20px}
+.tl-dot{position:absolute;left:-28px;top:4px;width:9px;height:9px;border-radius:50%;border:1px solid var(--neon);background:var(--bg);box-shadow:0 0 8px var(--neon)}
+.tl-time{font-family:var(--font-mono);font-size:9px;color:var(--neon3);letter-spacing:.1em;margin-bottom:4px}
+.tl-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.tl-desc{font-family:var(--font-mono);font-size:10px;color:var(--text2);line-height:1.6}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:20px}
+.stat-box{background:var(--bg2);padding:20px;text-align:center}
+.stat-num{font-family:var(--font-title);font-size:32px;font-weight:900;line-height:1;margin-bottom:6px;text-shadow:0 0 15px currentColor}
+.stat-lbl{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.1em}
+
+/* PREVIEW DO RELATÓRIO */
+.report-preview{background:#fff;color:#111;padding:40px;font-family:'Courier New',monospace;font-size:11px;line-height:1.7;position:relative}
+.rp-header{border-bottom:2px solid #111;padding-bottom:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr auto}
+.rp-logo{font-size:18px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+.rp-sub{font-size:10px;color:#555;letter-spacing:.05em}
+.rp-meta{text-align:right;font-size:10px;color:#555}
+.rp-section{margin-bottom:20px}
+.rp-section-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:12px}
+.rp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted #eee}
+.rp-row-label{color:#555}
+.rp-oc-item{padding:6px 0;border-bottom:1px solid #eee;display:grid;grid-template-columns:60px 1fr 80px 80px;gap:8px;font-size:10px}
+.rp-oc-header{font-weight:700;color:#555;font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+.rp-footer{border-top:2px solid #111;padding-top:14px;margin-top:20px;display:flex;justify-content:space-between;font-size:10px;color:#555}
+.rp-assinatura{border-top:1px solid #111;width:180px;padding-top:4px;text-align:center;font-size:9px;color:#555;margin-top:32px}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:20px 0}
+
+/* CORNER DECO */
+.corner{position:absolute;width:12px;height:12px;pointer-events:none}
+.corner.tl{top:0;left:0;border-top:1px solid var(--neon);border-left:1px solid var(--neon)}
+.corner.tr{top:0;right:0;border-top:1px solid var(--neon);border-right:1px solid var(--neon)}
+.corner.bl{bottom:0;left:0;border-bottom:1px solid var(--neon);border-left:1px solid var(--neon)}
+.corner.br{bottom:0;right:0;border-bottom:1px solid var(--neon);border-right:1px solid var(--neon)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--neon);padding:12px 20px;font-family:var(--font-mono);font-size:11px;color:var(--neon);letter-spacing:.08em;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:0 0 20px rgba(0,255,159,.2)}
+.toast.show{transform:translateY(0);opacity:1}
+
+@media print{
+  .sidebar,.topbar,.tabs,.add-oc,.btn-gerar,.btn-export,.oc-del,.cursor,.cursor-x,.grid-bg,.glow1,.glow2,.scan-v{display:none!important}
+  body{background:#fff!important;color:#111!important}
+  .main{display:block}
+  .content{padding:0}
+  .panel{display:block!important}
+  .report-preview{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-x" id="cursorx"></div>
+<div class="grid-bg"></div>
+<div class="scan-v"></div>
+<div class="glow1"></div>
+<div class="glow2"></div>
+<div class="toast" id="toast"></div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-title">RELATORIO.SYS</div>
+      <div class="sb-logo-sub">// SISTEMA DE TURNO V1.0</div>
+      <div class="sb-status"><span class="sb-dot"></span>SISTEMA OPERACIONAL</div>
+    </div>
+
+    <div class="sb-turno-info">
+      <div class="sti-label">// TURNO ATIVO</div>
+      <div class="sti-val" id="sb-turno-nome">TURNO A</div>
+      <div class="sti-sub" id="sb-turno-data">—</div>
+    </div>
+
+    <div class="sb-counters">
+      <div class="sb-count-row">
+        <div class="scr-label">OCORRÊNCIAS</div>
+        <div class="scr-val" style="color:var(--neon)" id="sb-oc-count">0</div>
+      </div>
+      <div class="sb-count-row">
+        <div class="scr-label">CRÍTICAS</div>
+        <div class="scr-val" style="color:var(--neon2)" id="sb-crit-count">0</div>
+      </div>
+      <div class="sb-count-row">
+        <div class="scr-label">AGENTES</div>
+        <div class="scr-val" style="color:var(--neon3)" id="sb-ag-count">0</div>
+      </div>
+      <div class="sb-count-row">
+        <div class="scr-label">ENCERRADAS</div>
+        <div class="scr-val" style="color:var(--amber)" id="sb-enc-count">0</div>
+      </div>
+    </div>
+
+    <div class="sb-section">// NAVEGAÇÃO</div>
+    <button class="sb-btn active" onclick="switchTab('dados')" id="btn-dados"><span class="sb-btn-icon">⚙</span>DADOS DO TURNO</button>
+    <button class="sb-btn" onclick="switchTab('ocorrencias')" id="btn-ocorrencias"><span class="sb-btn-icon">🚨</span>OCORRÊNCIAS</button>
+    <button class="sb-btn" onclick="switchTab('agentes')" id="btn-agentes"><span class="sb-btn-icon">👮</span>AGENTES</button>
+    <button class="sb-btn" onclick="switchTab('timeline')" id="btn-timeline"><span class="sb-btn-icon">📋</span>TIMELINE</button>
+    <button class="sb-btn" onclick="switchTab('relatorio')" id="btn-relatorio"><span class="sb-btn-icon">📄</span>RELATÓRIO FINAL</button>
+
+    <div style="margin-top:auto;padding:16px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.1em;margin-bottom:8px">// WISPLAY SISTEMAS</div>
+      <div style="font-family:var(--font-mono);font-size:8px;color:rgba(200,230,224,.15)">RELATORIO.SYS © 2026</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="tb-title">// GERADOR DE RELATÓRIO DE TURNO</div>
+      <div class="tb-right">
+        <div class="tb-time" id="relogio">--:--:--</div>
+        <button class="btn-export" onclick="exportarPDF()">⬇ EXPORTAR PDF</button>
+        <button class="btn-gerar" onclick="gerarRelatorio()">⚡ GERAR RELATÓRIO</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('dados')" id="tab-dados">⚙ DADOS DO TURNO</button>
+        <button class="tab" onclick="switchTab('ocorrencias')" id="tab-ocorrencias">🚨 OCORRÊNCIAS</button>
+        <button class="tab" onclick="switchTab('agentes')" id="tab-agentes">👮 AGENTES</button>
+        <button class="tab" onclick="switchTab('timeline')" id="tab-timeline">📋 TIMELINE</button>
+        <button class="tab" onclick="switchTab('relatorio')" id="tab-relatorio">📄 RELATÓRIO FINAL</button>
+      </div>
+
+      <!-- PANEL: DADOS DO TURNO -->
+      <div class="panel active" id="panel-dados">
+        <div class="card">
+          <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+          <div class="card-header"><span class="card-icon">⚙</span><span class="card-title">// CONFIGURAÇÃO DO TURNO</span></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">UNIDADE / BATALHÃO</label>
+                <input class="form-input" id="f-unidade" type="text" placeholder="Ex: 1º BPM — Centro" oninput="updateSidebar()"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">TURNO</label>
+                <select class="form-select" id="f-turno" onchange="updateSidebar()">
+                  <option value="A">TURNO A — 06:00 às 14:00</option>
+                  <option value="B">TURNO B — 14:00 às 22:00</option>
+                  <option value="C">TURNO C — 22:00 às 06:00</option>
+                  <option value="DIURNO">TURNO DIURNO — 07:00 às 19:00</option>
+                  <option value="NOTURNO">TURNO NOTURNO — 19:00 às 07:00</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">DATA</label>
+                <input class="form-input" id="f-data" type="date" oninput="updateSidebar()"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">COMANDANTE DO TURNO</label>
+                <input class="form-input" id="f-comandante" type="text" placeholder="Ex: Sgt. Ferreira" oninput="updateSidebar()"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">REGIÃO / ÁREA DE COBERTURA</label>
+                <input class="form-input" id="f-regiao" type="text" placeholder="Ex: Zona Sul — Leblon / Ipanema"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">CONDIÇÃO CLIMÁTICA</label>
+                <select class="form-select" id="f-clima">
+                  <option>☀️ CÉU LIMPO</option>
+                  <option>⛅ PARCIALMENTE NUBLADO</option>
+                  <option>🌧️ CHUVOSO</option>
+                  <option>⛈️ TEMPESTADE</option>
+                  <option>🌫️ NEBLINA</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label class="form-label">OBSERVAÇÕES GERAIS DO TURNO</label>
+                <textarea class="form-textarea" id="f-obs" placeholder="Situação geral, eventos especiais, comunicados importantes..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-icon">📊</span><span class="card-title">// RESUMO EM TEMPO REAL</span></div>
+          <div class="card-body">
+            <div class="stats-grid">
+              <div class="stat-box"><div class="stat-num" style="color:var(--neon)" id="st-total">0</div><div class="stat-lbl">TOTAL DE OCORR.</div></div>
+              <div class="stat-box"><div class="stat-num" style="color:var(--neon2)" id="st-criticas">0</div><div class="stat-lbl">CRÍTICAS</div></div>
+              <div class="stat-box"><div class="stat-num" style="color:var(--neon3)" id="st-agentes">0</div><div class="stat-lbl">AGENTES</div></div>
+              <div class="stat-box"><div class="stat-num" style="color:var(--amber)" id="st-enc">0</div><div class="stat-lbl">ENCERRADAS</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: OCORRÊNCIAS -->
+      <div class="panel" id="panel-ocorrencias">
+        <div class="add-oc">
+          <div class="add-oc-title">// REGISTRAR NOVA OCORRÊNCIA</div>
+          <div class="add-oc-grid">
+            <div class="form-group">
+              <label class="form-label">HORÁRIO</label>
+              <input class="form-input" id="oc-hora" type="time"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">TIPO</label>
+              <select class="form-select" id="oc-tipo">
+                <option>Roubo a transeunte</option>
+                <option>Confronto armado</option>
+                <option>Veículo roubado</option>
+                <option>Perturbação da ordem</option>
+                <option>Acidente de trânsito</option>
+                <option>Abordagem preventiva</option>
+                <option>Prisão em flagrante</option>
+                <option>Solicitação de apoio</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">LOCALIZAÇÃO</label>
+              <input class="form-input" id="oc-local" type="text" placeholder="Ex: Av. Atlântica, 500"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">PRIORIDADE</label>
+              <select class="form-select" id="oc-prio">
+                <option value="critica">🔴 CRÍTICA</option>
+                <option value="media">🟡 MÉDIA</option>
+                <option value="baixa">🟢 BAIXA</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">STATUS</label>
+              <select class="form-select" id="oc-status">
+                <option value="ativo">ATIVO</option>
+                <option value="concluido">CONCLUÍDO</option>
+                <option value="encerrado">ENCERRADO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">AGENTE RESP.</label>
+              <input class="form-input" id="oc-agente" type="text" placeholder="Ex: GCM Silva"/>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label">DESCRIÇÃO</label>
+              <input class="form-input" id="oc-desc" type="text" placeholder="Detalhes da ocorrência..."/>
+            </div>
+            <button class="btn-add" onclick="adicionarOcorrencia()" style="grid-column:1/-1">+ REGISTRAR OCORRÊNCIA</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-icon">🚨</span><span class="card-title">// OCORRÊNCIAS DO TURNO</span><span style="margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--text3)" id="oc-count-label">0 REGISTROS</span></div>
+          <div class="card-body">
+            <div class="oc-list" id="oc-list">
+              <div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em">// NENHUMA OCORRÊNCIA REGISTRADA</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: AGENTES -->
+      <div class="panel" id="panel-agentes">
+        <div class="add-oc" style="margin-bottom:16px">
+          <div class="add-oc-title">// ADICIONAR AGENTE AO TURNO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div class="form-group">
+              <label class="form-label">NOME</label>
+              <input class="form-input" id="ag-nome" type="text" placeholder="Ex: GCM Silva, M."/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">MATRÍCULA</label>
+              <input class="form-input" id="ag-mat" type="text" placeholder="Ex: 0847231"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">FUNÇÃO</label>
+              <select class="form-select" id="ag-func">
+                <option>Patrulha</option>
+                <option>Motorista</option>
+                <option>Rádio-operador</option>
+                <option>Comandante</option>
+                <option>Apoio</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">STATUS</label>
+              <select class="form-select" id="ag-status">
+                <option value="patrulha">Em Patrulha</option>
+                <option value="ocorrencia">Em Ocorrência</option>
+                <option value="plantao">De Plantão</option>
+                <option value="folga">Folga</option>
+              </select>
+            </div>
+            <button class="btn-add" onclick="adicionarAgente()">+ ADICIONAR</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-icon">👮</span><span class="card-title">// EFETIVO DO TURNO</span><span style="margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--text3)" id="ag-count-label">0 AGENTES</span></div>
+          <div class="card-body">
+            <div class="agentes-grid" id="ag-grid">
+              <div style="grid-column:1/-1;text-align:center;padding:32px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em">// NENHUM AGENTE ADICIONADO</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: TIMELINE -->
+      <div class="panel" id="panel-timeline">
+        <div class="add-oc" style="margin-bottom:16px">
+          <div class="add-oc-title">// ADICIONAR EVENTO À TIMELINE</div>
+          <div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:10px;align-items:end">
+            <div class="form-group">
+              <label class="form-label">HORÁRIO</label>
+              <input class="form-input" id="tl-hora" type="time"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">EVENTO</label>
+              <input class="form-input" id="tl-evento" type="text" placeholder="Ex: Início do turno"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">DESCRIÇÃO</label>
+              <input class="form-input" id="tl-desc" type="text" placeholder="Detalhes do evento..."/>
+            </div>
+            <button class="btn-add" onclick="adicionarTimeline()">+ ADICIONAR</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-icon">📋</span><span class="card-title">// LINHA DO TEMPO DO TURNO</span></div>
+          <div class="card-body">
+            <div class="timeline" id="timeline-list">
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-align:center;padding:24px 0">// NENHUM EVENTO REGISTRADO</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: RELATÓRIO FINAL -->
+      <div class="panel" id="panel-relatorio">
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <button class="btn-gerar" onclick="gerarRelatorio()" style="flex:1">⚡ GERAR RELATÓRIO COMPLETO</button>
+          <button class="btn-export" onclick="exportarPDF()">🖨️ IMPRIMIR / SALVAR PDF</button>
+        </div>
+        <div class="card" id="relatorio-container">
+          <div class="card-body" style="text-align:center;padding:48px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em">
+            // PREENCHA OS DADOS DO TURNO E CLIQUE EM "GERAR RELATÓRIO"
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// CURSOR
+const cur = document.getElementById('cursor');
+const curx = document.getElementById('cursorx');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px';
+  setTimeout(() => { curx.style.left = e.clientX + 'px'; curx.style.top = e.clientY + 'px'; }, 40);
+});
+
+// RELÓGIO
+function updateClock() {
+  const now = new Date();
+  document.getElementById('relogio').textContent =
+    now.toLocaleTimeString('pt-BR', {hour12: false});
+}
+setInterval(updateClock, 1000); updateClock();
+
+// DATA PADRÃO
+document.getElementById('f-data').value = new Date().toISOString().split('T')[0];
+const agora = new Date().toTimeString().slice(0,5);
+document.getElementById('oc-hora').value = agora;
+document.getElementById('tl-hora').value = agora;
+
+// ESTADO
+let ocorrencias = [];
+let agentes = [];
+let timeline = [];
+
+// TABS
+function switchTab(tab) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('btn-' + tab).classList.add('active');
+}
+
+// TOAST
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// UPDATE SIDEBAR
+function updateSidebar() {
+  const turno = document.getElementById('f-turno').value;
+  const data = document.getElementById('f-data').value;
+  document.getElementById('sb-turno-nome').textContent = 'TURNO ' + turno;
+  document.getElementById('sb-turno-data').textContent = data ? new Date(data + 'T12:00').toLocaleDateString('pt-BR') : '—';
+  updateStats();
+}
+
+function updateStats() {
+  const total = ocorrencias.length;
+  const criticas = ocorrencias.filter(o => o.prioridade === 'critica').length;
+  const enc = ocorrencias.filter(o => o.status === 'encerrado').length;
+  const nag = agentes.length;
+
+  ['st-total','sb-oc-count'].forEach(id => document.getElementById(id).textContent = total);
+  ['st-criticas','sb-crit-count'].forEach(id => document.getElementById(id).textContent = criticas);
+  ['st-agentes','sb-ag-count'].forEach(id => document.getElementById(id).textContent = nag);
+  ['st-enc','sb-enc-count'].forEach(id => document.getElementById(id).textContent = enc);
+  document.getElementById('oc-count-label').textContent = total + ' REGISTROS';
+  document.getElementById('ag-count-label').textContent = nag + ' AGENTES';
+}
+
+// OCORRÊNCIAS
+function adicionarOcorrencia() {
+  const hora = document.getElementById('oc-hora').value;
+  const tipo = document.getElementById('oc-tipo').value;
+  const local = document.getElementById('oc-local').value;
+  const prio = document.getElementById('oc-prio').value;
+  const status = document.getElementById('oc-status').value;
+  const agente = document.getElementById('oc-agente').value;
+  const desc = document.getElementById('oc-desc').value;
+
+  if (!hora || !local) { toast('// INFORME HORÁRIO E LOCALIZAÇÃO'); return; }
+
+  ocorrencias.push({hora, tipo, local, prioridade: prio, status, agente, desc, id: Date.now()});
+  renderOcorrencias();
+  updateStats();
+  document.getElementById('oc-local').value = '';
+  document.getElementById('oc-desc').value = '';
+  document.getElementById('oc-agente').value = '';
+  toast('// OCORRÊNCIA REGISTRADA');
+}
+
+const prioConfig = {
+  critica: {cor:'#ff003c', label:'CRÍTICA', textCor:'#ff6b8a'},
+  media:   {cor:'#ffdd00', label:'MÉDIA', textCor:'#ffee88'},
+  baixa:   {cor:'#00ff9f', label:'BAIXA', textCor:'#00ff9f'}
+};
+const statusConfig = {
+  ativo:     {cor:'#ff003c', label:'ATIVO'},
+  concluido: {cor:'#ffdd00', label:'CONCLUÍDO'},
+  encerrado: {cor:'#00ff9f', label:'ENCERRADO'}
+};
+
+function renderOcorrencias() {
+  const list = document.getElementById('oc-list');
+  if (!ocorrencias.length) {
+    list.innerHTML = '<div style="text-align:center;padding:32px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em">// NENHUMA OCORRÊNCIA REGISTRADA</div>';
+    return;
+  }
+  list.innerHTML = ocorrencias.map((oc, i) => {
+    const p = prioConfig[oc.prioridade];
+    const s = statusConfig[oc.status];
+    return `<div class="oc-item">
+      <div class="oc-badge" style="background:${p.cor};box-shadow:0 0 6px ${p.cor}"></div>
+      <div class="oc-info">
+        <div class="oc-tipo">${oc.tipo}</div>
+        <div class="oc-meta">${oc.hora} // ${oc.local}${oc.agente ? ' // ' + oc.agente : ''}${oc.desc ? ' — ' + oc.desc : ''}</div>
+      </div>
+      <div class="oc-status" style="color:${p.textCor};border-color:${p.cor}40">${p.label}</div>
+      <div class="oc-status" style="color:${s.cor};border-color:${s.cor}40">${s.label}</div>
+      <button class="oc-del" onclick="removerOcorrencia(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function removerOcorrencia(i) {
+  ocorrencias.splice(i, 1);
+  renderOcorrencias();
+  updateStats();
+  toast('// OCORRÊNCIA REMOVIDA');
+}
+
+// AGENTES
+function adicionarAgente() {
+  const nome = document.getElementById('ag-nome').value;
+  const mat = document.getElementById('ag-mat').value;
+  const func = document.getElementById('ag-func').value;
+  const status = document.getElementById('ag-status').value;
+
+  if (!nome) { toast('// INFORME O NOME DO AGENTE'); return; }
+
+  agentes.push({nome, mat, func, status, id: Date.now()});
+  renderAgentes();
+  updateStats();
+  document.getElementById('ag-nome').value = '';
+  document.getElementById('ag-mat').value = '';
+  toast('// AGENTE ADICIONADO AO TURNO');
+}
+
+const agStatusConfig = {
+  patrulha:   {cor:'#00ff9f', label:'EM PATRULHA'},
+  ocorrencia: {cor:'#ff003c', label:'EM OCORRÊNCIA'},
+  plantao:    {cor:'#00e5ff', label:'DE PLANTÃO'},
+  folga:      {cor:'rgba(200,230,224,.3)', label:'FOLGA'}
+};
+
+function renderAgentes() {
+  const grid = document.getElementById('ag-grid');
+  if (!agentes.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em">// NENHUM AGENTE ADICIONADO</div>';
+    return;
+  }
+  grid.innerHTML = agentes.map((ag, i) => {
+    const s = agStatusConfig[ag.status];
+    return `<div class="agente-card" style="border-left-color:${s.cor}20">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:${s.cor};box-shadow:0 0 6px ${s.cor}"></div>
+      <div class="agente-nome">${ag.nome}</div>
+      <div class="agente-mat">${ag.mat ? 'MAT: ' + ag.mat : ''}${ag.func ? ' // ' + ag.func.toUpperCase() : ''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="agente-status" style="color:${s.cor};border-color:${s.cor}40">${s.label}</div>
+        <button class="oc-del" onclick="removerAgente(${i})" style="width:22px;height:22px;font-size:10px">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removerAgente(i) {
+  agentes.splice(i, 1);
+  renderAgentes();
+  updateStats();
+  toast('// AGENTE REMOVIDO');
+}
+
+// TIMELINE
+function adicionarTimeline() {
+  const hora = document.getElementById('tl-hora').value;
+  const evento = document.getElementById('tl-evento').value;
+  const desc = document.getElementById('tl-desc').value;
+
+  if (!hora || !evento) { toast('// INFORME HORÁRIO E EVENTO'); return; }
+
+  timeline.push({hora, evento, desc});
+  timeline.sort((a, b) => a.hora.localeCompare(b.hora));
+  renderTimeline();
+  document.getElementById('tl-evento').value = '';
+  document.getElementById('tl-desc').value = '';
+  toast('// EVENTO ADICIONADO À TIMELINE');
+}
+
+function renderTimeline() {
+  const list = document.getElementById('timeline-list');
+  if (!timeline.length) {
+    list.innerHTML = '<div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-align:center;padding:24px 0">// NENHUM EVENTO REGISTRADO</div>';
+    return;
+  }
+  list.innerHTML = timeline.map((tl, i) => `
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-time">${tl.hora}</div>
+      <div class="tl-title">${tl.evento}</div>
+      ${tl.desc ? `<div class="tl-desc">${tl.desc}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// GERAR RELATÓRIO
+function gerarRelatorio() {
+  const unidade = document.getElementById('f-unidade').value || 'NÃO INFORMADO';
+  const turno = document.getElementById('f-turno').value;
+  const data = document.getElementById('f-data').value;
+  const cmd = document.getElementById('f-comandante').value || 'NÃO INFORMADO';
+  const regiao = document.getElementById('f-regiao').value || 'NÃO INFORMADO';
+  const clima = document.getElementById('f-clima').value;
+  const obs = document.getElementById('f-obs').value;
+  const dataFmt = data ? new Date(data + 'T12:00').toLocaleDateString('pt-BR', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) : '—';
+
+  const total = ocorrencias.length;
+  const criticas = ocorrencias.filter(o => o.prioridade === 'critica').length;
+  const enc = ocorrencias.filter(o => o.status === 'encerrado').length;
+  const ativas = ocorrencias.filter(o => o.status === 'ativo').length;
+
+  const ocHtml = ocorrencias.length ? `
+    <div class="rp-oc-item rp-oc-header"><span>HORA</span><span>TIPO / LOCAL</span><span>PRIORIDADE</span><span>STATUS</span></div>
+    ${ocorrencias.map(oc => `
+      <div class="rp-oc-item">
+        <span>${oc.hora}</span>
+        <span><strong>${oc.tipo}</strong><br>${oc.local}${oc.agente ? '<br>' + oc.agente : ''}</span>
+        <span>${prioConfig[oc.prioridade].label}</span>
+        <span>${statusConfig[oc.status].label}</span>
+      </div>
+    `).join('')}
+  ` : '<p style="color:#888;font-size:10px">Nenhuma ocorrência registrada neste turno.</p>';
+
+  const agHtml = agentes.length ? agentes.map(ag =>
+    `<div class="rp-row"><span class="rp-row-label">${ag.nome}${ag.mat ? ' (Mat: ' + ag.mat + ')' : ''}</span><span>${ag.func} — ${agStatusConfig[ag.status].label}</span></div>`
+  ).join('') : '<p style="color:#888;font-size:10px">Nenhum agente registrado.</p>';
+
+  const tlHtml = timeline.length ? timeline.map(tl =>
+    `<div class="rp-row"><span class="rp-row-label">${tl.hora}</span><span><strong>${tl.evento}</strong>${tl.desc ? ' — ' + tl.desc : ''}</span></div>`
+  ).join('') : '<p style="color:#888;font-size:10px">Nenhum evento registrado.</p>';
+
+  const protNum = `${data ? data.replace(/-/g,'') : '00000000'}-T${turno}-${String(Math.floor(Math.random()*9000)+1000)}`;
+
+  document.getElementById('relatorio-container').innerHTML = `
+    <div class="card-body" style="padding:0">
+      <div class="report-preview" id="report-print">
+        <div class="rp-header">
+          <div>
+            <div class="rp-logo">RELATÓRIO DE TURNO</div>
+            <div class="rp-sub">${unidade.toUpperCase()} // TURNO ${turno}</div>
+          </div>
+          <div class="rp-meta">
+            <div>Protocolo: ${protNum}</div>
+            <div>Emitido em: ${new Date().toLocaleString('pt-BR')}</div>
+            <div>Gerado por: RELATORIO.SYS v1.0</div>
+          </div>
+        </div>
+
+        <div class="rp-section">
+          <div class="rp-section-title">1. DADOS DO TURNO</div>
+          <div class="rp-row"><span class="rp-row-label">Data</span><span>${dataFmt}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Turno</span><span>TURNO ${turno}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Unidade</span><span>${unidade}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Comandante</span><span>${cmd}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Área de Cobertura</span><span>${regiao}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Condição Climática</span><span>${clima}</span></div>
+        </div>
+
+        <div class="rp-section">
+          <div class="rp-section-title">2. RESUMO ESTATÍSTICO</div>
+          <div class="rp-row"><span class="rp-row-label">Total de Ocorrências</span><span>${total}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Ocorrências Críticas</span><span>${criticas}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Ocorrências Encerradas</span><span>${enc}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Ocorrências Ativas</span><span>${ativas}</span></div>
+          <div class="rp-row"><span class="rp-row-label">Efetivo em Serviço</span><span>${agentes.length} agentes</span></div>
+        </div>
+
+        <div class="rp-section">
+          <div class="rp-section-title">3. REGISTRO DE OCORRÊNCIAS</div>
+          ${ocHtml}
+        </div>
+
+        <div class="rp-section">
+          <div class="rp-section-title">4. EFETIVO DO TURNO</div>
+          ${agHtml}
+        </div>
+
+        <div class="rp-section">
+          <div class="rp-section-title">5. LINHA DO TEMPO</div>
+          ${tlHtml}
+        </div>
+
+        ${obs ? `<div class="rp-section"><div class="rp-section-title">6. OBSERVAÇÕES GERAIS</div><p style="font-size:11px;line-height:1.7">${obs}</p></div>` : ''}
+
+        <div style="display:flex;gap:48px;margin-top:40px">
+          <div><div class="rp-assinatura">Comandante do Turno<br>${cmd}</div></div>
+          <div><div class="rp-assinatura">Ciente — Comando<br>&nbsp;</div></div>
+        </div>
+
+        <div class="rp-footer">
+          <span>Documento gerado automaticamente por RELATORIO.SYS v1.0 — WISPLAY SISTEMAS</span>
+          <span>Protocolo: ${protNum}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  switchTab('relatorio');
+  toast('// RELATÓRIO GERADO COM SUCESSO');
+}
+
+function exportarPDF() {
+  window.print();
+}
+
+updateSidebar();
+</script>
+</body>
+</html>

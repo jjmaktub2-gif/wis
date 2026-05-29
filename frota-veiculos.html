@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FROTA.SYS // MÓDULO DE VEÍCULOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --neon:#00ff9f;--neon2:#ff003c;--neon3:#00e5ff;--neon4:#ff00ff;--amber:#ffdd00;
+  --bg:#020408;--bg2:#060c12;--bg3:#0a1018;
+  --border:rgba(0,255,159,.12);--border2:rgba(0,255,159,.28);
+  --text:#c8e6e0;--text2:rgba(200,230,224,.5);--text3:rgba(200,230,224,.25);
+  --font-mono:'Share Tech Mono',monospace;
+  --font-title:'Orbitron',monospace;
+  --font-body:'Rajdhani',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;cursor:none}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:9990}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.6) 100%);pointer-events:none;z-index:9989}
+.cursor{position:fixed;width:4px;height:18px;background:var(--neon);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 8px var(--neon);animation:cblink .8s infinite}
+@keyframes cblink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cursor-x{position:fixed;width:24px;height:24px;pointer-events:none;z-index:9998;transform:translate(-50%,-50%)}
+.cursor-x::before,.cursor-x::after{content:'';position:absolute;background:rgba(0,229,255,.5)}
+.cursor-x::before{width:100%;height:1px;top:50%;transform:translateY(-50%)}
+.cursor-x::after{width:1px;height:100%;left:50%;transform:translateX(-50%)}
+.grid-bg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,159,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,159,.025) 1px,transparent 1px);background-size:60px 60px;z-index:0}
+.glow1{position:fixed;width:500px;height:500px;border-radius:50%;background:rgba(0,255,159,.04);filter:blur(80px);top:-200px;left:-100px;pointer-events:none;z-index:0}
+.glow2{position:fixed;width:400px;height:400px;border-radius:50%;background:rgba(0,229,255,.03);filter:blur(80px);bottom:-100px;right:-100px;pointer-events:none;z-index:0}
+.scan-v{position:fixed;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--neon3),transparent);animation:sv 10s linear infinite;opacity:.06;pointer-events:none;z-index:9991}
+@keyframes sv{0%{left:-1px}100%{left:100vw}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes alert-pulse{0%,100%{border-color:rgba(255,221,0,.3)}50%{border-color:rgba(255,221,0,.7);box-shadow:0 0 12px rgba(255,221,0,.15)}}
+
+.app{position:relative;z-index:2;display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:20px;border-bottom:1px solid var(--border)}
+.sb-logo-title{font-family:var(--font-title);font-size:13px;font-weight:900;color:var(--neon);text-shadow:0 0 15px var(--neon);letter-spacing:.08em;margin-bottom:4px}
+.sb-logo-sub{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.12em}
+.sb-online{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--font-mono);font-size:9px;color:var(--neon)}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--neon);box-shadow:0 0 6px var(--neon);animation:blink 1.5s infinite}
+.sb-section{padding:14px 20px 6px;font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.18em;border-top:1px solid var(--border)}
+.sb-stats{margin:12px 16px;display:grid;gap:4px}
+.ss-row{background:rgba(0,0,0,.3);border:1px solid var(--border);padding:7px 12px;display:flex;justify-content:space-between;align-items:center}
+.ss-lbl{font-family:var(--font-mono);font-size:9px;color:var(--text3)}
+.ss-val{font-family:var(--font-title);font-size:14px;font-weight:700}
+.sb-nav{width:100%;background:none;border:none;padding:9px 20px;text-align:left;cursor:none;display:flex;align-items:center;gap:10px;color:var(--text2);font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;transition:all .2s}
+.sb-nav:hover,.sb-nav.active{background:rgba(0,255,159,.06);color:var(--neon)}
+.sb-nav.active{border-left:2px solid var(--neon)}
+
+/* TOPBAR */
+.topbar{background:rgba(2,4,8,.9);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.tb-title{font-family:var(--font-title);font-size:13px;font-weight:700;letter-spacing:.08em}
+.tb-right{display:flex;gap:10px;align-items:center}
+.tb-clock{font-family:var(--font-mono);font-size:11px;color:var(--neon3);letter-spacing:.1em}
+.btn-primary{background:var(--neon);color:var(--bg);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:8px 20px;border:none;cursor:none;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s}
+.btn-primary:hover{background:#fff;box-shadow:0 0 20px var(--neon)}
+.btn-outline{background:none;color:var(--neon3);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;padding:8px 16px;border:1px solid rgba(0,229,255,.3);cursor:none;transition:all .2s}
+.btn-outline:hover{background:rgba(0,229,255,.06)}
+
+.main{display:flex;flex-direction:column}
+.content{padding:20px 24px;flex:1}
+
+/* TABS */
+.tabs{display:flex;gap:1px;background:var(--border);margin-bottom:20px}
+.tab{flex:1;background:var(--bg2);font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;color:var(--text3);padding:10px;text-align:center;cursor:none;transition:all .2s;border:none}
+.tab.active{background:rgba(0,255,159,.06);color:var(--neon);border-bottom:2px solid var(--neon)}
+.panel{display:none}
+.panel.active{display:block}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);margin-bottom:20px}
+.stat-box{background:var(--bg2);padding:14px;text-align:center}
+.stat-num{font-family:var(--font-title);font-size:26px;font-weight:900;line-height:1;margin-bottom:4px;text-shadow:0 0 15px currentColor}
+.stat-lbl{font-family:var(--font-mono);font-size:8px;color:var(--text3);letter-spacing:.1em}
+
+/* VEÍCULO CARD */
+.vtr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vtr-card{background:var(--bg2);border:1px solid var(--border);padding:18px;position:relative;overflow:hidden;transition:all .2s;cursor:none}
+.vtr-card:hover{border-color:rgba(0,255,159,.25);background:var(--bg3)}
+.vtr-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.vtr-card.disponivel::before{background:var(--neon);box-shadow:0 0 8px var(--neon)}
+.vtr-card.em-uso::before{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.vtr-card.manutencao::before{background:var(--neon2);box-shadow:0 0 8px var(--neon2)}
+.vtr-card.manutencao{animation:alert-pulse 2s infinite}
+.vtr-card.inativo::before{background:var(--text3)}
+.vtr-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.vtr-icon{font-size:28px;flex-shrink:0}
+.vtr-info{flex:1}
+.vtr-placa{font-family:var(--font-title);font-size:15px;font-weight:900;letter-spacing:.08em;margin-bottom:3px}
+.vtr-modelo{font-size:12px;color:var(--text2);margin-bottom:3px}
+.vtr-unidade{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.06em}
+.vtr-status-badge{font-family:var(--font-mono);font-size:9px;padding:3px 10px;border:1px solid;letter-spacing:.08em;flex-shrink:0}
+.vtr-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px}
+.vtr-field{background:rgba(0,0,0,.3);border:1px solid var(--border);padding:6px 8px}
+.vf-label{font-family:var(--font-mono);font-size:8px;color:var(--text3);margin-bottom:2px;letter-spacing:.1em}
+.vf-val{font-family:var(--font-mono);font-size:10px}
+.vtr-km-bar{margin-bottom:12px}
+.km-label{font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:5px;display:flex;justify-content:space-between}
+.km-track{height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.km-fill{height:100%;border-radius:2px;transition:width .5s}
+.vtr-manut-alert{background:rgba(255,221,0,.06);border:1px solid rgba(255,221,0,.25);padding:6px 10px;font-family:var(--font-mono);font-size:9px;color:var(--amber);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.vtr-actions{display:flex;gap:6px}
+.btn-sm{font-family:var(--font-mono);font-size:9px;padding:5px 12px;border:1px solid;cursor:none;letter-spacing:.06em;transition:all .2s}
+.btn-sm-green{color:var(--neon);border-color:rgba(0,255,159,.3);background:rgba(0,255,159,.05)}
+.btn-sm-green:hover{background:rgba(0,255,159,.12)}
+.btn-sm-amber{color:var(--amber);border-color:rgba(255,221,0,.3);background:rgba(255,221,0,.04)}
+.btn-sm-amber:hover{background:rgba(255,221,0,.1)}
+.btn-sm-red{color:var(--neon2);border-color:rgba(255,0,60,.25);background:rgba(255,0,60,.04)}
+.btn-sm-red:hover{background:rgba(255,0,60,.1)}
+
+/* MANUTENÇÃO */
+.manut-list{display:flex;flex-direction:column;gap:8px}
+.manut-item{background:var(--bg2);border:1px solid var(--border);padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;transition:border-color .2s}
+.manut-item:hover{border-color:rgba(0,255,159,.2)}
+.manut-item.pendente{border-left:2px solid var(--amber)}
+.manut-item.agendado{border-left:2px solid var(--neon3)}
+.manut-item.concluido{border-left:2px solid var(--neon);opacity:.6}
+.mi-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.mi-meta{font-family:var(--font-mono);font-size:9px;color:var(--text3);line-height:1.6}
+.mi-badge{font-family:var(--font-mono);font-size:9px;padding:2px 10px;border:1px solid;letter-spacing:.06em}
+
+/* KM LOG */
+.km-log{display:flex;flex-direction:column;gap:6px}
+.km-item{background:var(--bg2);border:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:14px}
+.ki-date{font-family:var(--font-mono);font-size:10px;color:var(--neon3);min-width:80px}
+.ki-vtr{font-family:var(--font-mono);font-size:10px;color:var(--neon);min-width:80px}
+.ki-body{flex:1}
+.ki-title{font-size:12px;font-weight:600;margin-bottom:2px}
+.ki-detail{font-family:var(--font-mono);font-size:9px;color:var(--text3)}
+.ki-km{font-family:var(--font-title);font-size:14px;font-weight:700;color:var(--text);text-align:right}
+
+/* FORM */
+.form-box{background:rgba(0,255,159,.03);border:1px solid rgba(0,255,159,.15);padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.form-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent)}
+.form-title{font-family:var(--font-mono);font-size:10px;color:var(--neon);letter-spacing:.18em;margin-bottom:14px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-group.half{grid-column:span 2}
+.form-label{font-family:var(--font-mono);font-size:9px;color:var(--neon3);letter-spacing:.15em}
+.form-input,.form-select,.form-textarea{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 12px;outline:none;transition:border-color .2s;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--neon)}
+.form-select{cursor:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300ff9f'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.form-textarea{resize:vertical;min-height:70px}
+
+/* CORNER / TOAST */
+.corner{position:absolute;width:10px;height:10px;pointer-events:none}
+.corner.tl{top:0;left:0;border-top:1px solid var(--neon);border-left:1px solid var(--neon)}
+.corner.tr{top:0;right:0;border-top:1px solid var(--neon);border-right:1px solid var(--neon)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--neon);padding:10px 18px;font-family:var(--font-mono);font-size:11px;color:var(--neon);letter-spacing:.08em;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+.empty{text-align:center;padding:48px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.12em}
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-x" id="cursorx"></div>
+<div class="grid-bg"></div>
+<div class="scan-v"></div>
+<div class="glow1"></div>
+<div class="glow2"></div>
+<div class="toast" id="toast"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-title">FROTA.SYS</div>
+      <div class="sb-logo-sub">// MÓDULO DE VEÍCULOS v1.0</div>
+      <div class="sb-online"><span class="sb-dot"></span>FROTA MONITORADA</div>
+    </div>
+    <div class="sb-stats">
+      <div class="ss-row"><div class="ss-lbl">TOTAL DE VIATURAS</div><div class="ss-val" style="color:var(--neon)" id="s-total">0</div></div>
+      <div class="ss-row"><div class="ss-lbl">DISPONÍVEIS</div><div class="ss-val" style="color:var(--neon)" id="s-disp">0</div></div>
+      <div class="ss-row"><div class="ss-lbl">EM USO</div><div class="ss-val" style="color:var(--amber)" id="s-uso">0</div></div>
+      <div class="ss-row"><div class="ss-lbl">MANUTENÇÃO</div><div class="ss-val" style="color:var(--neon2)" id="s-manut">0</div></div>
+    </div>
+    <div class="sb-section">// NAVEGAÇÃO</div>
+    <button class="sb-nav active" onclick="switchTab('frota')" id="btn-frota"><span style="font-size:13px">🚗</span>FROTA COMPLETA</button>
+    <button class="sb-nav" onclick="switchTab('manutencao')" id="btn-manutencao"><span style="font-size:13px">🔧</span>MANUTENÇÕES</button>
+    <button class="sb-nav" onclick="switchTab('km')" id="btn-km"><span style="font-size:13px">📊</span>LOG DE KM</button>
+    <button class="sb-nav" onclick="switchTab('cadastrar')" id="btn-cadastrar"><span style="font-size:13px">➕</span>CADASTRAR VIATURA</button>
+    <div style="margin-top:auto;padding:16px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.1em;margin-bottom:4px">// WISPLAY SISTEMAS</div>
+      <div style="font-family:var(--font-mono);font-size:8px;color:rgba(200,230,224,.12)">FROTA.SYS © 2026</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="tb-title">// MÓDULO DE VEÍCULOS E FROTA</div>
+      <div class="tb-right">
+        <div class="tb-clock" id="relogio">--:--:--</div>
+        <button class="btn-outline" onclick="switchTab('manutencao')">🔧 MANUTENÇÕES</button>
+        <button class="btn-primary" onclick="switchTab('cadastrar')">+ CADASTRAR VIATURA</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num" style="color:var(--neon)" id="st-total">0</div><div class="stat-lbl">TOTAL VIATURAS</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--neon)" id="st-disp">0</div><div class="stat-lbl">DISPONÍVEIS</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--amber)" id="st-uso">0</div><div class="stat-lbl">EM USO</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--neon2)" id="st-manut">0</div><div class="stat-lbl">MANUTENÇÃO</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--neon3)" id="st-km">0</div><div class="stat-lbl">KM TOTAL FROTA</div></div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('frota')" id="tab-frota">🚗 FROTA COMPLETA</button>
+        <button class="tab" onclick="switchTab('manutencao')" id="tab-manutencao">🔧 MANUTENÇÕES</button>
+        <button class="tab" onclick="switchTab('km')" id="tab-km">📊 LOG DE KM</button>
+        <button class="tab" onclick="switchTab('cadastrar')" id="tab-cadastrar">➕ CADASTRAR</button>
+      </div>
+
+      <!-- FROTA -->
+      <div class="panel active" id="panel-frota">
+        <div class="vtr-grid" id="vtr-grid"></div>
+      </div>
+
+      <!-- MANUTENÇÃO -->
+      <div class="panel" id="panel-manutencao">
+        <div class="form-box" style="margin-bottom:20px">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="form-title">// REGISTRAR MANUTENÇÃO</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">VIATURA</label>
+              <select class="form-select" id="m-vtr"></select>
+            </div>
+            <div class="form-group"><label class="form-label">TIPO</label>
+              <select class="form-select" id="m-tipo">
+                <option>Revisão periódica</option><option>Troca de óleo</option><option>Troca de pneus</option>
+                <option>Freios</option><option>Suspensão</option><option>Motor</option>
+                <option>Elétrica</option><option>Funilaria/Pintura</option><option>Outro</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">STATUS</label>
+              <select class="form-select" id="m-status">
+                <option value="pendente">PENDENTE</option>
+                <option value="agendado">AGENDADO</option>
+                <option value="concluido">CONCLUÍDO</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">DATA PREVISTA</label>
+              <input class="form-input" id="m-data" type="date"/>
+            </div>
+            <div class="form-group"><label class="form-label">CUSTO ESTIMADO (R$)</label>
+              <input class="form-input" id="m-custo" type="number" placeholder="Ex: 350"/>
+            </div>
+            <div class="form-group"><label class="form-label">OFICINA</label>
+              <input class="form-input" id="m-oficina" type="text" placeholder="Ex: Auto Center Silva"/>
+            </div>
+            <div class="form-group full"><label class="form-label">OBSERVAÇÕES</label>
+              <textarea class="form-textarea" id="m-obs" placeholder="Detalhes da manutenção..."></textarea>
+            </div>
+            <div class="form-group full" style="display:flex;justify-content:flex-end">
+              <button class="btn-primary" onclick="addManutencao()">⚡ REGISTRAR MANUTENÇÃO</button>
+            </div>
+          </div>
+        </div>
+        <div class="manut-list" id="manut-list"></div>
+      </div>
+
+      <!-- KM LOG -->
+      <div class="panel" id="panel-km">
+        <div class="form-box" style="margin-bottom:20px">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="form-title">// REGISTRAR QUILOMETRAGEM</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">VIATURA</label>
+              <select class="form-select" id="k-vtr"></select>
+            </div>
+            <div class="form-group"><label class="form-label">KM ATUAL</label>
+              <input class="form-input" id="k-km" type="number" placeholder="Ex: 48500"/>
+            </div>
+            <div class="form-group"><label class="form-label">MOTORISTA</label>
+              <input class="form-input" id="k-mot" type="text" placeholder="Ex: GCM Silva"/>
+            </div>
+            <div class="form-group half"><label class="form-label">DESTINO / ROTA</label>
+              <input class="form-input" id="k-rota" type="text" placeholder="Ex: Patrulha Zona Sul"/>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end">
+              <button class="btn-primary" style="width:100%" onclick="addKm()">⚡ REGISTRAR</button>
+            </div>
+          </div>
+        </div>
+        <div class="km-log" id="km-log-list"></div>
+      </div>
+
+      <!-- CADASTRAR -->
+      <div class="panel" id="panel-cadastrar">
+        <div class="form-box">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="form-title">// CADASTRAR NOVA VIATURA</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">PLACA</label>
+              <input class="form-input" id="c-placa" type="text" placeholder="Ex: RIO-4821"/>
+            </div>
+            <div class="form-group"><label class="form-label">MODELO</label>
+              <input class="form-input" id="c-modelo" type="text" placeholder="Ex: Ford Ranger"/>
+            </div>
+            <div class="form-group"><label class="form-label">ANO</label>
+              <input class="form-input" id="c-ano" type="number" placeholder="Ex: 2022"/>
+            </div>
+            <div class="form-group"><label class="form-label">TIPO</label>
+              <select class="form-select" id="c-tipo">
+                <option>Viatura</option><option>Caminhonete</option><option>Moto</option>
+                <option>Van</option><option>Ambulância</option><option>Blindado</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">UNIDADE</label>
+              <select class="form-select" id="c-unidade">
+                <option>BPM-01</option><option>BPM-05</option><option>BPM-09</option>
+                <option>BPM-14</option><option>BPM-19</option><option>GCM Central</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">KM INICIAL</label>
+              <input class="form-input" id="c-km" type="number" placeholder="Ex: 45000"/>
+            </div>
+            <div class="form-group"><label class="form-label">STATUS</label>
+              <select class="form-select" id="c-status">
+                <option value="disponivel">DISPONÍVEL</option>
+                <option value="em-uso">EM USO</option>
+                <option value="manutencao">MANUTENÇÃO</option>
+                <option value="inativo">INATIVO</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">PRÓX. MANUTENÇÃO (KM)</label>
+              <input class="form-input" id="c-proxmanut" type="number" placeholder="Ex: 50000"/>
+            </div>
+            <div class="form-group"><label class="form-label">MOTORISTA ATUAL</label>
+              <input class="form-input" id="c-motorista" type="text" placeholder="Ex: GCM Costa, A."/>
+            </div>
+            <div class="form-group full" style="display:flex;justify-content:flex-end;margin-top:4px">
+              <button class="btn-primary" onclick="cadastrarVtr()">⚡ CADASTRAR VIATURA</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const cur=document.getElementById('cursor'),curx=document.getElementById('cursorx');
+document.addEventListener('mousemove',e=>{
+  cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';
+  setTimeout(()=>{curx.style.left=e.clientX+'px';curx.style.top=e.clientY+'px'},40);
+});
+function tick(){document.getElementById('relogio').textContent=new Date().toLocaleTimeString('pt-BR',{hour12:false})}
+setInterval(tick,1000);tick();
+
+const statusCfg={
+  disponivel:{label:'DISPONÍVEL',cor:'#00ff9f',cls:'disponivel'},
+  'em-uso':{label:'EM USO',cor:'#ffdd00',cls:'em-uso'},
+  manutencao:{label:'MANUTENÇÃO',cor:'#ff003c',cls:'manutencao'},
+  inativo:{label:'INATIVO',cor:'rgba(200,230,224,.3)',cls:'inativo'},
+};
+const tipoIcon={Viatura:'🚔',Caminhonete:'🚙',Moto:'🏍️',Van:'🚐',Ambulância:'🚑',Blindado:'🛡️'};
+
+let viaturas=[
+  {id:1,placa:'RIO-0847',modelo:'Ford Ranger',ano:2022,tipo:'Caminhonete',unidade:'BPM-01',km:48200,proxManut:50000,status:'disponivel',motorista:'GCM Silva, M.'},
+  {id:2,placa:'RIO-2311',modelo:'Chevrolet S10',ano:2021,tipo:'Caminhonete',unidade:'BPM-05',km:62400,proxManut:65000,status:'em-uso',motorista:'GCM Rocha, F.'},
+  {id:3,placa:'RIO-7203',modelo:'Volkswagen Amarok',ano:2023,tipo:'Caminhonete',unidade:'BPM-09',km:21300,proxManut:25000,status:'disponivel',motorista:'—'},
+  {id:4,placa:'RIO-4311',modelo:'Ford Transit',ano:2020,tipo:'Van',unidade:'BPM-14',km:89100,proxManut:90000,status:'manutencao',motorista:'GCM Lima, P.'},
+  {id:5,placa:'RIO-9901',modelo:'Honda CB 500',ano:2022,tipo:'Moto',unidade:'BPM-19',km:34800,proxManut:40000,status:'disponivel',motorista:'GCM Farias, R.'},
+  {id:6,placa:'RIO-1199',modelo:'Fiat Ducato',ano:2019,tipo:'Ambulância',unidade:'GCM Central',km:112000,proxManut:115000,status:'em-uso',motorista:'GCM Torres, V.'},
+];
+
+let manutencoes=[
+  {id:1,vtr:'RIO-4311',tipo:'Freios',status:'pendente',data:'2026-05-20',custo:800,oficina:'Auto Center Silva',obs:'Pastilhas desgastadas. Troca urgente.'},
+  {id:2,vtr:'RIO-2311',tipo:'Revisão periódica',status:'agendado',data:'2026-05-25',custo:450,oficina:'Oficina BPM',obs:'Revisão dos 60.000 km.'},
+  {id:3,vtr:'RIO-0847',tipo:'Troca de óleo',status:'concluido',data:'2026-04-10',custo:180,oficina:'Auto Center Silva',obs:'Óleo 5W30 sintético.'},
+];
+
+let kmLog=[
+  {vtr:'RIO-2311',km:62400,motorista:'GCM Rocha, F.',rota:'Patrulha Zona Sul',data:'14/05/2026 06:00',diff:'+240km'},
+  {vtr:'RIO-0847',km:48200,motorista:'GCM Silva, M.',rota:'Patrulha Centro',data:'14/05/2026 06:10',diff:'+180km'},
+  {vtr:'RIO-9901',km:34800,motorista:'GCM Farias, R.',rota:'Ronda Copacabana',data:'13/05/2026 22:00',diff:'+95km'},
+  {vtr:'RIO-1199',km:112000,motorista:'GCM Torres, V.',rota:'Atendimento médico',data:'13/05/2026 14:00',diff:'+60km'},
+];
+
+function switchTab(tab){
+  ['frota','manutencao','km','cadastrar'].forEach(t=>{
+    document.getElementById('panel-'+t).classList.remove('active');
+    document.getElementById('tab-'+t).classList.remove('active');
+    document.getElementById('btn-'+t).classList.remove('active');
+  });
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('btn-'+tab).classList.add('active');
+  populateSelects();
+}
+
+function populateSelects(){
+  ['m-vtr','k-vtr'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=viaturas.map(v=>`<option>${v.placa} — ${v.modelo}</option>`).join('');
+  });
+}
+
+function updateStats(){
+  const total=viaturas.length;
+  const disp=viaturas.filter(v=>v.status==='disponivel').length;
+  const uso=viaturas.filter(v=>v.status==='em-uso').length;
+  const man=viaturas.filter(v=>v.status==='manutencao').length;
+  const kmTotal=viaturas.reduce((a,v)=>a+v.km,0);
+  ['st-total','s-total'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent=total;});
+  ['st-disp','s-disp'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent=disp;});
+  ['st-uso','s-uso'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent=uso;});
+  ['st-manut','s-manut'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).textContent=man;});
+  document.getElementById('st-km').textContent=(kmTotal/1000).toFixed(0)+'k';
+}
+
+function renderFrota(){
+  const grid=document.getElementById('vtr-grid');
+  grid.innerHTML=viaturas.map(v=>{
+    const s=statusCfg[v.status];
+    const icon=tipoIcon[v.tipo]||'🚗';
+    const kmPct=v.proxManut>0?Math.min(100,Math.round((v.km/v.proxManut)*100)):0;
+    const needsManut=v.proxManut>0&&(v.proxManut-v.km)<3000;
+    const kmColor=kmPct>90?'#ff003c':kmPct>75?'#ffdd00':'#00ff9f';
+    const manutAlert=needsManut?`<div class="vtr-manut-alert">⚠ MANUTENÇÃO PRÓXIMA — ${(v.proxManut-v.km).toLocaleString()} km restantes</div>`:'';
+    return `<div class="vtr-card ${v.status}">
+      <div class="vtr-header">
+        <div class="vtr-icon">${icon}</div>
+        <div class="vtr-info">
+          <div class="vtr-placa" style="color:${s.cor};text-shadow:0 0 10px ${s.cor}">${v.placa}</div>
+          <div class="vtr-modelo">${v.modelo} · ${v.ano}</div>
+          <div class="vtr-unidade">${v.unidade} · ${v.tipo.toUpperCase()}</div>
+        </div>
+        <div class="vtr-status-badge" style="color:${s.cor};border-color:${s.cor}40;background:${s.cor}10">${s.label}</div>
+      </div>
+      <div class="vtr-fields">
+        <div class="vtr-field"><div class="vf-label">KM ATUAL</div><div class="vf-val" style="color:var(--text)">${v.km.toLocaleString()}</div></div>
+        <div class="vtr-field"><div class="vf-label">PRÓX. MANUT.</div><div class="vf-val" style="color:${kmColor}">${v.proxManut>0?v.proxManut.toLocaleString()+'km':'—'}</div></div>
+        <div class="vtr-field"><div class="vf-label">MOTORISTA</div><div class="vf-val" style="color:var(--text2);font-size:9px">${v.motorista||'—'}</div></div>
+      </div>
+      <div class="vtr-km-bar">
+        <div class="km-label"><span>KM ATÉ MANUTENÇÃO</span><span style="color:${kmColor}">${kmPct}%</span></div>
+        <div class="km-track"><div class="km-fill" style="width:${kmPct}%;background:${kmColor};box-shadow:0 0 4px ${kmColor}"></div></div>
+      </div>
+      ${manutAlert}
+      <div class="vtr-actions">
+        <button class="btn-sm btn-sm-green" onclick="setStatus(${v.id},'disponivel')">DISPONÍVEL</button>
+        <button class="btn-sm btn-sm-amber" onclick="setStatus(${v.id},'em-uso')">EM USO</button>
+        <button class="btn-sm btn-sm-red" onclick="setStatus(${v.id},'manutencao')">MANUT.</button>
+        <button class="btn-sm btn-sm-red" style="margin-left:auto;border-color:rgba(255,0,60,.15);color:rgba(255,0,60,.4)" onclick="removerVtr(${v.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setStatus(id,status){
+  const v=viaturas.find(x=>x.id===id);
+  if(v){v.status=status;}
+  updateStats();renderFrota();
+  showToast('// STATUS ATUALIZADO — '+statusCfg[status].label);
+}
+
+function removerVtr(id){
+  viaturas=viaturas.filter(v=>v.id!==id);
+  updateStats();renderFrota();populateSelects();
+  showToast('// VIATURA REMOVIDA');
+}
+
+function renderManutencao(){
+  const stCfg={
+    pendente:{cor:'#ffdd00',label:'PENDENTE'},
+    agendado:{cor:'#00e5ff',label:'AGENDADO'},
+    concluido:{cor:'#00ff9f',label:'CONCLUÍDO'},
+  };
+  const list=document.getElementById('manut-list');
+  list.innerHTML=manutencoes.length?manutencoes.map((m,i)=>{
+    const s=stCfg[m.status];
+    return `<div class="manut-item ${m.status}">
+      <div>
+        <div class="mi-title">${m.tipo} — <span style="color:var(--neon)">${m.vtr}</span></div>
+        <div class="mi-meta">${m.data?'📅 '+new Date(m.data+'T12:00').toLocaleDateString('pt-BR'):''} ${m.oficina?' · '+m.oficina:''} ${m.custo?' · R$ '+parseFloat(m.custo).toLocaleString('pt-BR'):''}</div>
+        ${m.obs?`<div class="mi-meta" style="color:var(--text2);margin-top:3px">${m.obs}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="mi-badge" style="color:${s.cor};border-color:${s.cor}40">${s.label}</div>
+        <button class="btn-sm btn-sm-red" onclick="removerManut(${i})">✕</button>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty">// NENHUMA MANUTENÇÃO REGISTRADA</div>';
+}
+
+function addManutencao(){
+  const vtr=document.getElementById('m-vtr').value.split(' — ')[0];
+  if(!vtr){showToast('// SELECIONE A VIATURA');return;}
+  manutencoes.unshift({
+    id:Date.now(),
+    vtr,
+    tipo:document.getElementById('m-tipo').value,
+    status:document.getElementById('m-status').value,
+    data:document.getElementById('m-data').value,
+    custo:document.getElementById('m-custo').value,
+    oficina:document.getElementById('m-oficina').value,
+    obs:document.getElementById('m-obs').value,
+  });
+  ['m-data','m-custo','m-oficina','m-obs'].forEach(id=>document.getElementById(id).value='');
+  renderManutencao();showToast('// MANUTENÇÃO REGISTRADA');
+}
+
+function removerManut(i){
+  manutencoes.splice(i,1);
+  renderManutencao();showToast('// REGISTRO REMOVIDO');
+}
+
+function renderKmLog(){
+  const list=document.getElementById('km-log-list');
+  list.innerHTML=kmLog.length?kmLog.map(k=>`
+    <div class="km-item">
+      <div class="ki-date">${k.data}</div>
+      <div class="ki-vtr">${k.vtr}</div>
+      <div class="ki-body">
+        <div class="ki-title">${k.rota}</div>
+        <div class="ki-detail">Motorista: ${k.motorista}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="ki-km">${k.km.toLocaleString()} km</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--neon)">${k.diff}</div>
+      </div>
+    </div>
+  `).join(''):'<div class="empty">// NENHUM REGISTRO DE KM</div>';
+}
+
+function addKm(){
+  const vtrRaw=document.getElementById('k-vtr').value;
+  const km=parseInt(document.getElementById('k-km').value);
+  const mot=document.getElementById('k-mot').value;
+  const rota=document.getElementById('k-rota').value;
+  if(!km){showToast('// INFORME A QUILOMETRAGEM');return;}
+  const placa=vtrRaw.split(' — ')[0];
+  const v=viaturas.find(x=>x.placa===placa);
+  const diff=v?'+'+Math.max(0,km-v.km)+'km':'—';
+  if(v&&km>v.km)v.km=km;
+  kmLog.unshift({vtr:placa,km,motorista:mot||'—',rota:rota||'Patrulha',data:new Date().toLocaleDateString('pt-BR')+' '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),diff});
+  ['k-km','k-mot','k-rota'].forEach(id=>document.getElementById(id).value='');
+  updateStats();renderFrota();renderKmLog();
+  showToast('// KM REGISTRADO — '+placa);
+}
+
+function cadastrarVtr(){
+  const placa=document.getElementById('c-placa').value;
+  if(!placa){showToast('// INFORME A PLACA');return;}
+  viaturas.push({
+    id:Date.now(),
+    placa:placa.toUpperCase(),
+    modelo:document.getElementById('c-modelo').value,
+    ano:parseInt(document.getElementById('c-ano').value)||2024,
+    tipo:document.getElementById('c-tipo').value,
+    unidade:document.getElementById('c-unidade').value,
+    km:parseInt(document.getElementById('c-km').value)||0,
+    proxManut:parseInt(document.getElementById('c-proxmanut').value)||0,
+    status:document.getElementById('c-status').value,
+    motorista:document.getElementById('c-motorista').value||'—',
+  });
+  ['c-placa','c-modelo','c-ano','c-km','c-proxmanut','c-motorista'].forEach(id=>document.getElementById(id).value='');
+  updateStats();renderFrota();populateSelects();
+  showToast('// VIATURA CADASTRADA');
+  switchTab('frota');
+}
+
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+document.getElementById('m-data').value=new Date().toISOString().split('T')[0];
+updateStats();renderFrota();renderManutencao();renderKmLog();populateSelects();
+</script>
+</body>
+</html>

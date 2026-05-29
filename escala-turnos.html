@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESCALA.SYS // MÓDULO DE ESCALAS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --neon:#00ff9f;--neon2:#ff003c;--neon3:#00e5ff;--neon4:#ff00ff;--amber:#ffdd00;
+  --bg:#020408;--bg2:#060c12;--bg3:#0a1018;
+  --border:rgba(0,255,159,.12);--border2:rgba(0,255,159,.28);
+  --text:#c8e6e0;--text2:rgba(200,230,224,.5);--text3:rgba(200,230,224,.25);
+  --font-mono:'Share Tech Mono',monospace;
+  --font-title:'Orbitron',monospace;
+  --font-body:'Rajdhani',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;cursor:none}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:9990}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.6) 100%);pointer-events:none;z-index:9989}
+.cursor{position:fixed;width:4px;height:18px;background:var(--neon);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 8px var(--neon);animation:cblink .8s infinite}
+@keyframes cblink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cursor-x{position:fixed;width:24px;height:24px;pointer-events:none;z-index:9998;transform:translate(-50%,-50%)}
+.cursor-x::before,.cursor-x::after{content:'';position:absolute;background:rgba(0,229,255,.5)}
+.cursor-x::before{width:100%;height:1px;top:50%;transform:translateY(-50%)}
+.cursor-x::after{width:1px;height:100%;left:50%;transform:translateX(-50%)}
+.grid-bg{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,159,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,159,.025) 1px,transparent 1px);background-size:60px 60px;z-index:0}
+.glow1{position:fixed;width:500px;height:500px;border-radius:50%;background:rgba(0,255,159,.04);filter:blur(80px);top:-200px;left:-100px;pointer-events:none;z-index:0}
+.glow2{position:fixed;width:400px;height:400px;border-radius:50%;background:rgba(0,229,255,.03);filter:blur(80px);bottom:-100px;right:-100px;pointer-events:none;z-index:0}
+.scan-v{position:fixed;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--neon3),transparent);animation:sv 10s linear infinite;opacity:.06;pointer-events:none;z-index:9991}
+@keyframes sv{0%{left:-1px}100%{left:100vw}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* LAYOUT */
+.app{position:relative;z-index:2;display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-logo{padding:20px;border-bottom:1px solid var(--border)}
+.sb-logo-title{font-family:var(--font-title);font-size:13px;font-weight:900;color:var(--neon);text-shadow:0 0 15px var(--neon);letter-spacing:.08em;margin-bottom:4px}
+.sb-logo-sub{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.12em}
+.sb-online{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--font-mono);font-size:9px;color:var(--neon)}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--neon);box-shadow:0 0 6px var(--neon);animation:blink 1.5s infinite}
+.sb-section{padding:16px 20px 8px;font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.18em;border-top:1px solid var(--border)}
+.sb-nav{width:100%;background:none;border:none;padding:9px 20px;text-align:left;cursor:none;display:flex;align-items:center;gap:10px;color:var(--text2);font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;transition:all .2s}
+.sb-nav:hover,.sb-nav.active{background:rgba(0,255,159,.06);color:var(--neon)}
+.sb-nav.active{border-left:2px solid var(--neon)}
+.sb-nav-icon{font-size:13px;width:18px;text-align:center}
+.sb-stats{margin:12px 16px;display:grid;gap:4px}
+.ss-row{background:rgba(0,0,0,.3);border:1px solid var(--border);padding:7px 12px;display:flex;justify-content:space-between;align-items:center}
+.ss-lbl{font-family:var(--font-mono);font-size:9px;color:var(--text3)}
+.ss-val{font-family:var(--font-title);font-size:13px;font-weight:700}
+
+/* TOPBAR */
+.topbar{background:rgba(2,4,8,.9);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.tb-title{font-family:var(--font-title);font-size:13px;font-weight:700;letter-spacing:.08em}
+.tb-right{display:flex;gap:10px;align-items:center}
+.tb-clock{font-family:var(--font-mono);font-size:11px;color:var(--neon3);letter-spacing:.1em}
+.btn-primary{background:var(--neon);color:var(--bg);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;padding:8px 20px;border:none;cursor:none;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s}
+.btn-primary:hover{background:#fff;box-shadow:0 0 20px var(--neon)}
+.btn-outline{background:none;color:var(--neon3);font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;padding:8px 16px;border:1px solid rgba(0,229,255,.3);cursor:none;transition:all .2s}
+.btn-outline:hover{background:rgba(0,229,255,.06)}
+
+/* CONTENT */
+.main{display:flex;flex-direction:column}
+.content{padding:24px 28px;flex:1}
+
+/* TABS */
+.tabs{display:flex;gap:1px;background:var(--border);margin-bottom:24px}
+.tab{flex:1;background:var(--bg2);font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;color:var(--text3);padding:10px;text-align:center;cursor:none;transition:all .2s;border:none}
+.tab.active{background:rgba(0,255,159,.06);color:var(--neon);border-bottom:2px solid var(--neon)}
+.panel{display:none}
+.panel.active{display:block}
+
+/* SEMANA GRID */
+.week-nav{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.week-btn{background:none;border:1px solid var(--border2);color:var(--neon);font-family:var(--font-mono);font-size:14px;width:32px;height:32px;cursor:none;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.week-btn:hover{background:rgba(0,255,159,.08);box-shadow:0 0 10px rgba(0,255,159,.15)}
+.week-title{font-family:var(--font-title);font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--text)}
+.week-grid{display:grid;grid-template-columns:120px repeat(7,1fr);gap:1px;background:var(--border)}
+.wg-header{background:var(--bg3);padding:10px 8px;text-align:center;font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.1em}
+.wg-header.today{color:var(--neon);background:rgba(0,255,159,.06)}
+.wg-agent-name{background:var(--bg2);padding:10px 12px;font-family:var(--font-mono);font-size:10px;color:var(--text2);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.wg-agent-nm{font-size:11px;color:var(--text)}
+.wg-agent-mat{font-size:8px;color:var(--text3)}
+.wg-cell{background:var(--bg2);padding:5px;border-bottom:1px solid var(--border);min-height:52px;cursor:none;transition:background .2s;position:relative}
+.wg-cell:hover{background:var(--bg3)}
+.wg-shift{border-radius:1px;padding:4px 6px;font-family:var(--font-mono);font-size:9px;letter-spacing:.04em;display:flex;flex-direction:column;gap:1px;position:relative;overflow:hidden}
+.wg-shift::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.wg-shift-label{font-weight:700;letter-spacing:.06em}
+.wg-shift-time{opacity:.7;font-size:8px}
+.wg-off{background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.06);padding:4px 6px;font-family:var(--font-mono);font-size:8px;color:var(--text3);text-align:center}
+.wg-folga{background:rgba(255,221,0,.04);border:1px solid rgba(255,221,0,.12);padding:4px 6px;font-family:var(--font-mono);font-size:8px;color:var(--amber);text-align:center}
+
+/* AGENTES */
+.agents-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.agent-card{background:var(--bg2);border:1px solid var(--border);padding:16px;position:relative;overflow:hidden;transition:border-color .2s}
+.agent-card:hover{border-color:rgba(0,255,159,.25)}
+.agent-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.ac-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.ac-avatar{width:36px;height:36px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:rgba(0,0,0,.3)}
+.ac-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.ac-mat{font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.06em}
+.ac-fields{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
+.ac-field{background:rgba(0,0,0,.3);border:1px solid var(--border);padding:5px 8px}
+.ac-fl{font-family:var(--font-mono);font-size:8px;color:var(--text3);margin-bottom:2px;letter-spacing:.1em}
+.ac-fv{font-family:var(--font-mono);font-size:10px}
+.ac-status{font-family:var(--font-mono);font-size:9px;padding:2px 10px;border:1px solid;letter-spacing:.06em;display:inline-block}
+.ac-del{position:absolute;top:10px;right:10px;background:none;border:1px solid rgba(255,0,60,.15);color:rgba(255,0,60,.4);font-size:10px;width:20px;height:20px;cursor:none;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.ac-del:hover{background:rgba(255,0,60,.1);color:var(--neon2);border-color:var(--neon2)}
+
+/* FORM */
+.form-card{background:rgba(0,255,159,.03);border:1px solid rgba(0,255,159,.15);padding:18px;margin-bottom:18px;position:relative}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent)}
+.form-title{font-family:var(--font-mono);font-size:10px;color:var(--neon);letter-spacing:.15em;margin-bottom:14px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-family:var(--font-mono);font-size:9px;color:var(--neon3);letter-spacing:.15em}
+.form-input,.form-select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 12px;outline:none;transition:border-color .2s;width:100%}
+.form-input:focus,.form-select:focus{border-color:var(--neon)}
+.form-select{cursor:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300ff9f'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+/* TURNOS LEGEND */
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:9px;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:1px}
+
+/* CORNER */
+.corner{position:absolute;width:10px;height:10px;pointer-events:none}
+.corner.tl{top:0;left:0;border-top:1px solid var(--neon);border-left:1px solid var(--neon)}
+.corner.tr{top:0;right:0;border-top:1px solid var(--neon);border-right:1px solid var(--neon)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--neon);padding:10px 18px;font-family:var(--font-mono);font-size:11px;color:var(--neon);letter-spacing:.08em;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);width:480px;max-width:95vw;position:relative;overflow:hidden}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent)}
+.modal-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--font-mono);font-size:11px;color:var(--neon);letter-spacing:.12em}
+.modal-close{background:none;border:1px solid var(--border2);color:var(--text2);font-size:12px;width:26px;height:26px;cursor:none;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{border-color:var(--neon2);color:var(--neon2)}
+.modal-body{padding:18px}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.btn-cancel{background:none;border:1px solid var(--border2);color:var(--text2);font-family:var(--font-mono);font-size:11px;padding:7px 18px;cursor:none;transition:all .2s}
+.btn-cancel:hover{border-color:var(--neon2);color:var(--neon2)}
+.btn-confirm{background:var(--neon);color:var(--bg);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.08em;padding:7px 22px;border:none;cursor:none;clip-path:polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%);transition:all .2s}
+.btn-confirm:hover{background:#fff;box-shadow:0 0 15px var(--neon)}
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-x" id="cursorx"></div>
+<div class="grid-bg"></div>
+<div class="scan-v"></div>
+<div class="glow1"></div>
+<div class="glow2"></div>
+<div class="toast" id="toast"></div>
+
+<!-- MODAL ESCALA -->
+<div class="modal-overlay" id="modal-escala">
+  <div class="modal">
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="modal-header">
+      <div class="modal-title">// ATRIBUIR TURNO</div>
+      <button class="modal-close" onclick="closeModalEscala()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">AGENTE</label>
+          <select class="form-select" id="me-agente"></select>
+        </div>
+        <div class="form-group"><label class="form-label">DIA DA SEMANA</label>
+          <select class="form-select" id="me-dia">
+            <option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option>
+            <option value="3">Quinta</option><option value="4">Sexta</option><option value="5">Sábado</option><option value="6">Domingo</option>
+          </select>
+        </div>
+        <div class="form-group full"><label class="form-label">TIPO DE TURNO</label>
+          <select class="form-select" id="me-turno">
+            <option value="A">TURNO A — 06:00 às 14:00</option>
+            <option value="B">TURNO B — 14:00 às 22:00</option>
+            <option value="C">TURNO C — 22:00 às 06:00</option>
+            <option value="DIURNO">DIURNO — 07:00 às 19:00</option>
+            <option value="NOTURNO">NOTURNO — 19:00 às 07:00</option>
+            <option value="FOLGA">FOLGA</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModalEscala()">CANCELAR</button>
+      <button class="btn-confirm" onclick="confirmarEscala()">ATRIBUIR</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-title">ESCALA.SYS</div>
+      <div class="sb-logo-sub">// MÓDULO DE ESCALAS v1.0</div>
+      <div class="sb-online"><span class="sb-dot"></span>SISTEMA ATIVO</div>
+    </div>
+    <div class="sb-stats">
+      <div class="ss-row"><div class="ss-lbl">AGENTES</div><div class="ss-val" style="color:var(--neon)" id="s-ag">0</div></div>
+      <div class="ss-row"><div class="ss-lbl">TURNOS ESTA SEMANA</div><div class="ss-val" style="color:var(--neon3)" id="s-turnos">0</div></div>
+      <div class="ss-row"><div class="ss-lbl">FOLGAS</div><div class="ss-val" style="color:var(--amber)" id="s-folgas">0</div></div>
+      <div class="ss-row"><div class="ss-lbl">COBERTURA</div><div class="ss-val" style="color:var(--neon)" id="s-cob">0%</div></div>
+    </div>
+    <div class="sb-section">// NAVEGAÇÃO</div>
+    <button class="sb-nav active" onclick="switchTab('escala')" id="btn-escala"><span class="sb-nav-icon">📅</span>ESCALA SEMANAL</button>
+    <button class="sb-nav" onclick="switchTab('agentes')" id="btn-agentes"><span class="sb-nav-icon">👮</span>AGENTES</button>
+    <button class="sb-nav" onclick="switchTab('cadastrar')" id="btn-cadastrar"><span class="sb-nav-icon">➕</span>CADASTRAR AGENTE</button>
+    <div style="margin-top:auto;padding:16px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:.1em;margin-bottom:4px">// WISPLAY SISTEMAS</div>
+      <div style="font-family:var(--font-mono);font-size:8px;color:rgba(200,230,224,.12)">ESCALA.SYS © 2026</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="tb-title">// MÓDULO DE ESCALAS</div>
+      <div class="tb-right">
+        <div class="tb-clock" id="relogio">--:--:--</div>
+        <button class="btn-outline" onclick="switchTab('cadastrar')">+ AGENTE</button>
+        <button class="btn-primary" onclick="openModalEscala()">⚡ ATRIBUIR TURNO</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('escala')" id="tab-escala">📅 ESCALA SEMANAL</button>
+        <button class="tab" onclick="switchTab('agentes')" id="tab-agentes">👮 AGENTES</button>
+        <button class="tab" onclick="switchTab('cadastrar')" id="tab-cadastrar">➕ CADASTRAR</button>
+      </div>
+
+      <!-- PANEL: ESCALA -->
+      <div class="panel active" id="panel-escala">
+        <div class="week-nav">
+          <button class="week-btn" onclick="navSemana(-1)">◀</button>
+          <div class="week-title" id="week-label">SEMANA ATUAL</div>
+          <button class="week-btn" onclick="navSemana(1)">▶</button>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(0,255,159,.3)"></div>TURNO A</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(0,229,255,.3)"></div>TURNO B</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(255,0,255,.3)"></div>TURNO C</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(99,102,241,.3)"></div>DIURNO</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(255,0,60,.3)"></div>NOTURNO</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(255,221,0,.15)"></div>FOLGA</div>
+        </div>
+        <div style="overflow-x:auto">
+          <div class="week-grid" id="week-grid" style="min-width:700px"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: AGENTES -->
+      <div class="panel" id="panel-agentes">
+        <div class="agents-grid" id="agents-grid">
+          <div style="grid-column:1/-1;text-align:center;padding:40px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.12em">// NENHUM AGENTE CADASTRADO</div>
+        </div>
+      </div>
+
+      <!-- PANEL: CADASTRAR -->
+      <div class="panel" id="panel-cadastrar">
+        <div class="form-card">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="form-title">// CADASTRAR NOVO AGENTE</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">NOME COMPLETO</label><input class="form-input" id="f-nome" type="text" placeholder="Ex: GCM Silva, M."/></div>
+            <div class="form-group"><label class="form-label">MATRÍCULA</label><input class="form-input" id="f-mat" type="text" placeholder="Ex: 0847231"/></div>
+            <div class="form-group"><label class="form-label">FUNÇÃO</label>
+              <select class="form-select" id="f-func">
+                <option>Patrulha</option><option>Motorista</option><option>Rádio-operador</option>
+                <option>Comandante</option><option>Apoio</option><option>Supervisor</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">UNIDADE</label><input class="form-input" id="f-unidade" type="text" placeholder="Ex: 1º BPM"/></div>
+            <div class="form-group"><label class="form-label">TURNO PADRÃO</label>
+              <select class="form-select" id="f-turno-pad">
+                <option value="A">TURNO A</option><option value="B">TURNO B</option><option value="C">TURNO C</option>
+                <option value="DIURNO">DIURNO</option><option value="NOTURNO">NOTURNO</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">STATUS</label>
+              <select class="form-select" id="f-status">
+                <option value="ativo">ATIVO</option><option value="afastado">AFASTADO</option><option value="ferias">FÉRIAS</option>
+              </select>
+            </div>
+            <div class="form-group full" style="display:flex;justify-content:flex-end;padding-top:4px">
+              <button class="btn-primary" onclick="cadastrarAgente()">⚡ CADASTRAR AGENTE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const cur=document.getElementById('cursor'),curx=document.getElementById('cursorx');
+document.addEventListener('mousemove',e=>{
+  cur.style.left=e.clientX+'px';cur.style.top=e.clientY+'px';
+  setTimeout(()=>{curx.style.left=e.clientX+'px';curx.style.top=e.clientY+'px'},40);
+});
+function tick(){document.getElementById('relogio').textContent=new Date().toLocaleTimeString('pt-BR',{hour12:false})}
+setInterval(tick,1000);tick();
+
+const DIAS=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+const turnoConfig={
+  A:{label:'TURNO A',time:'06–14h',bg:'rgba(0,255,159,.12)',cor:'#00ff9f',border:'rgba(0,255,159,.3)'},
+  B:{label:'TURNO B',time:'14–22h',bg:'rgba(0,229,255,.1)',cor:'#00e5ff',border:'rgba(0,229,255,.25)'},
+  C:{label:'TURNO C',time:'22–06h',bg:'rgba(255,0,255,.1)',cor:'#ff00ff',border:'rgba(255,0,255,.25)'},
+  DIURNO:{label:'DIURNO',time:'07–19h',bg:'rgba(99,102,241,.1)',cor:'#a78bfa',border:'rgba(99,102,241,.25)'},
+  NOTURNO:{label:'NOTURNO',time:'19–07h',bg:'rgba(255,0,60,.1)',cor:'#ff003c',border:'rgba(255,0,60,.25)'},
+  FOLGA:{label:'FOLGA',time:'',bg:'rgba(255,221,0,.04)',cor:'#ffdd00',border:'rgba(255,221,0,.18)'},
+};
+const statusConfig={
+  ativo:{cor:'#00ff9f',label:'ATIVO'},
+  afastado:{cor:'#ff003c',label:'AFASTADO'},
+  ferias:{cor:'#ffdd00',label:'FÉRIAS'},
+};
+
+let agentes=[
+  {id:1,nome:'GCM Silva, M.',mat:'0847231',func:'Patrulha',unidade:'1º BPM',turnoPad:'A',status:'ativo'},
+  {id:2,nome:'GCM Rocha, F.',mat:'0923411',func:'Patrulha',unidade:'1º BPM',turnoPad:'B',status:'ativo'},
+  {id:3,nome:'GCM Costa, A.',mat:'0761203',func:'Motorista',unidade:'1º BPM',turnoPad:'A',status:'ativo'},
+  {id:4,nome:'GCM Lima, P.',mat:'0654311',func:'Rádio-operador',unidade:'9º BPM',turnoPad:'C',status:'ativo'},
+  {id:5,nome:'Sgt. Ferreira',mat:'0412099',func:'Comandante',unidade:'1º BPM',turnoPad:'DIURNO',status:'ativo'},
+  {id:6,nome:'GCM Farias, R.',mat:'0883201',func:'Apoio',unidade:'5º BPM',turnoPad:'B',status:'afastado'},
+];
+
+let escalas={};// key: agId-diaSemana => turno
+let weekOffset=0;
+
+function getWeekDates(offset=0){
+  const now=new Date();
+  const day=now.getDay();
+  const monday=new Date(now);
+  monday.setDate(now.getDate()-(day===0?6:day-1)+(offset*7));
+  return Array.from({length:7},(_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return d;});
+}
+
+function navSemana(dir){weekOffset+=dir;renderEscala();}
+
+function switchTab(tab){
+  ['escala','agentes','cadastrar'].forEach(t=>{
+    document.getElementById('panel-'+t).classList.remove('active');
+    document.getElementById('tab-'+t).classList.remove('active');
+    document.getElementById('btn-'+t).classList.remove('active');
+  });
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('btn-'+tab).classList.add('active');
+}
+
+function openModalEscala(){
+  const sel=document.getElementById('me-agente');
+  sel.innerHTML=agentes.map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
+  document.getElementById('modal-escala').classList.add('open');
+}
+function closeModalEscala(){document.getElementById('modal-escala').classList.remove('open')}
+
+function confirmarEscala(){
+  const agId=document.getElementById('me-agente').value;
+  const dia=document.getElementById('me-dia').value;
+  const turno=document.getElementById('me-turno').value;
+  escalas[`${agId}-${dia}`]=turno;
+  closeModalEscala();renderEscala();updateStats();
+  showToast('// TURNO ATRIBUÍDO');
+}
+
+function cadastrarAgente(){
+  const nome=document.getElementById('f-nome').value;
+  if(!nome){showToast('// INFORME O NOME');return;}
+  agentes.push({
+    id:Date.now(),nome,
+    mat:document.getElementById('f-mat').value,
+    func:document.getElementById('f-func').value,
+    unidade:document.getElementById('f-unidade').value,
+    turnoPad:document.getElementById('f-turno-pad').value,
+    status:document.getElementById('f-status').value,
+  });
+  ['f-nome','f-mat','f-unidade'].forEach(id=>document.getElementById(id).value='');
+  renderAgentes();updateStats();showToast('// AGENTE CADASTRADO');
+  switchTab('agentes');
+}
+
+function removerAgente(id){
+  agentes=agentes.filter(a=>a.id!==id);
+  Object.keys(escalas).filter(k=>k.startsWith(id+'-')).forEach(k=>delete escalas[k]);
+  renderAgentes();renderEscala();updateStats();showToast('// AGENTE REMOVIDO');
+}
+
+function updateStats(){
+  const totalTurnos=Object.values(escalas).filter(t=>t!=='FOLGA').length;
+  const folgas=Object.values(escalas).filter(t=>t==='FOLGA').length;
+  const dias7=agentes.length*7;
+  const cob=dias7>0?Math.round((totalTurnos/Math.max(dias7,1))*100):0;
+  document.getElementById('s-ag').textContent=agentes.length;
+  document.getElementById('s-turnos').textContent=totalTurnos;
+  document.getElementById('s-folgas').textContent=folgas;
+  document.getElementById('s-cob').textContent=Math.min(100,cob)+'%';
+}
+
+function renderEscala(){
+  const dates=getWeekDates(weekOffset);
+  const today=new Date();
+  const fmt=d=>d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  document.getElementById('week-label').textContent=`${fmt(dates[0])} — ${fmt(dates[6])}`;
+  const isToday=d=>d.toDateString()===today.toDateString();
+  let html=`<div class="wg-header">AGENTE</div>`;
+  dates.forEach((d,i)=>{
+    html+=`<div class="wg-header ${isToday(d)?'today':''}">${DIAS[i]}<br><span style="font-size:8px;opacity:.6">${fmt(d)}</span></div>`;
+  });
+  agentes.forEach(ag=>{
+    const sc=statusConfig[ag.status];
+    html+=`<div class="wg-agent-name"><div class="wg-agent-nm">${ag.nome}</div><div class="wg-agent-mat" style="color:${sc.cor}">${ag.mat||''} · ${sc.label}</div></div>`;
+    for(let d=0;d<7;d++){
+      const key=`${ag.id}-${d}`;
+      const turno=escalas[key]||ag.turnoPad;
+      const tc=turnoConfig[turno]||turnoConfig.A;
+      if(turno==='FOLGA'){
+        html+=`<div class="wg-cell"><div class="wg-folga">FOLGA</div></div>`;
+      } else {
+        html+=`<div class="wg-cell"><div class="wg-shift" style="background:${tc.bg};border:1px solid ${tc.border}"><div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:${tc.cor};box-shadow:0 0 4px ${tc.cor}"></div><div class="wg-shift-label" style="color:${tc.cor};padding-left:6px">${tc.label}</div><div class="wg-shift-time" style="color:${tc.cor};padding-left:6px">${tc.time}</div></div></div>`;
+      }
+    }
+  });
+  if(!agentes.length){
+    html+=`<div style="grid-column:1/-1;text-align:center;padding:40px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.12em;background:var(--bg2)">// CADASTRE AGENTES PARA VER A ESCALA</div>`;
+  }
+  document.getElementById('week-grid').innerHTML=html;
+}
+
+function renderAgentes(){
+  const grid=document.getElementById('agents-grid');
+  if(!agentes.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;font-family:var(--font-mono);font-size:11px;color:var(--text3);letter-spacing:.12em">// NENHUM AGENTE CADASTRADO</div>';
+    return;
+  }
+  grid.innerHTML=agentes.map(ag=>{
+    const sc=statusConfig[ag.status];
+    const tc=turnoConfig[ag.turnoPad]||turnoConfig.A;
+    return `<div class="agent-card" style="border-left-color:${sc.cor}20">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:2px;background:${sc.cor};box-shadow:0 0 6px ${sc.cor}"></div>
+      <button class="ac-del" onclick="removerAgente(${ag.id})">✕</button>
+      <div class="ac-header">
+        <div class="ac-avatar">👮</div>
+        <div><div class="ac-name">${ag.nome}</div><div class="ac-mat">MAT: ${ag.mat||'—'}</div></div>
+      </div>
+      <div class="ac-fields">
+        <div class="ac-field"><div class="ac-fl">FUNÇÃO</div><div class="ac-fv" style="color:var(--text)">${ag.func}</div></div>
+        <div class="ac-field"><div class="ac-fl">UNIDADE</div><div class="ac-fv" style="color:var(--text)">${ag.unidade||'—'}</div></div>
+        <div class="ac-field"><div class="ac-fl">TURNO PADRÃO</div><div class="ac-fv" style="color:${tc.cor}">${ag.turnoPad}</div></div>
+        <div class="ac-field"><div class="ac-fl">STATUS</div><div class="ac-fv" style="color:${sc.cor}">${sc.label}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// INIT — escala padrão com turnos do agente
+agentes.forEach(ag=>{
+  for(let d=0;d<7;d++){
+    if(d>=5&&ag.turnoPad!=='C') escalas[`${ag.id}-${d}`]='FOLGA';
+    else escalas[`${ag.id}-${d}`]=ag.turnoPad;
+  }
+});
+
+renderEscala();renderAgentes();updateStats();
+</script>
+</body>
+</html>
